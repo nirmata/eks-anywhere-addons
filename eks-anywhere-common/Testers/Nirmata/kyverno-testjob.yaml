@@ -12,7 +12,8 @@ spec:
           serviceAccountName: 'kyverno'
           containers:
             - name: job
-              image: 'alpine/k8s:1.26.2'
+              # image: 'alpine/k8s:1.26.2'
+              image: ghcr.io/nirmata/alpine-kubectl:1.28
               imagePullPolicy: Always
               command:
                 - /bin/bash
