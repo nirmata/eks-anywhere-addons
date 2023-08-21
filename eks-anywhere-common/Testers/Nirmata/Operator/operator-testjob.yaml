@@ -1,15 +1,15 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: kyverno-test-cronjob
-  namespace: kyverno
+  name: operator-test-cronjob
+  namespace: nirmata-system
 spec:
   schedule: "10 10 * * *"
   jobTemplate:
     spec:
       template:
         spec:
-          serviceAccountName: 'kyverno'
+          serviceAccountName: 'kyverno-operator'
           containers:
             - name: job
               # image: 'alpine/k8s:1.26.2'
@@ -20,7 +20,26 @@ spec:
               args:
                 - -c
                 - >-
-                  echo -e "1. Checking readiness probe for kyvenro pod...\n"
+                  oper_nsp=nirmata-system;
+                  oper_name=kyverno-operator;
+                  
+                  echo "1. Waiting for kyvenro operator deployment $oper_nsp/$oper_name to get ready...";
+                  while [ -z $operator_deploy ]; 
+                  do operator_deploy=`kubectl get deploy -n $oper_nsp $oper_name -o jsonpath="{.metadata.name}"` 2>/dev/null && echo Waiting;
+                  sleep 5;
+                  done;
+
+                  oper_exp_replicas=`kubectl get deploy -n $oper_nsp $oper_name -o jsonpath="{.status.replicas}"` 2>/dev/null;
+                  oper_ready_replicas=`kubectl get deploy -n $oper_nsp $oper_name -o jsonpath="{.status.readyReplicas}"` 2>/dev/null;
+                  echo "Deployment created. $oper_ready_replicas out of $oper_exp_replicas replicas ready";
+
+                  while [ "$oper_ready_replicas" != "$oper_exp_replicas" ];
+                  do oper_ready_replicas=`kubectl get deploy -n $oper_nsp $oper_name -o jsonpath="{.status.readyReplicas}"` && echo Waiting;
+                  sleep 5;
+                  done;
+                  echo "Operator ready";
+
+                  echo "2. Checking readiness probe for kyvenro pod...";
                   kyverno_pod="...";
                   while [[ "$kyverno_pod" != "kyverno-"* ]];
                   do 
@@ -50,7 +69,7 @@ spec:
                   \n        metadata:
                   \n          namespace: \"!default\"" | kubectl apply -f -
 
-                  echo -e "2. Checking policy....\n"
+                  echo "3. Checking policy...."
 
                   sleep 30;
 
